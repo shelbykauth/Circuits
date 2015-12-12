@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+<html>
+<head>
+	<title>Circuit Building Game</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script src="main.js"></script>
+	<link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+	<div id="game">
+		<div id="grid"></div>
+		<div id="selection"><form>
+			<fieldset id="type">
+				<input type="radio" name="type" value="N">N-Type<br>
+				<input type="radio" name="type" value="P">P-Type<br>
+				<input type="radio" name="type" value="M">Metal<br>
+				<input type="radio" name="type" value="V">Via<br>
+				<input type="checkbox" name="type" id="delete">Delete<br>
+				<input type="checkbox" name="type" id="clickToHold">Click once to stay selected
+			</fieldset>
+			<!--
+			<fieldset id="location">
+				Point A: X and Y
+				<input type="number" id="ax" min="1">
+				<input type="number" id="ay" min="1"><br>
+				Point B: X and Y
+				<input type="number" id="bx" min="1">
+				<input type="number" id="by" min="1"><br>
+				<button id="connect">Connect the Squares</button><br>
+				Note: Please keep (X xor Y) the same value.
+			</fieldset>
+			<!-- -->
+			<br>
+		</form></div>
+		<dl id="updates">
+			<dt>Pro Tips</dt>
+				<dd>Hold mousebutton and move it to draw.  Move your mouse slowly.<dd>
+				<dd>When using the line-connector, make sure X and/or Y are on the same level.</dd>
+				<dd>When using the line-connector, make sure that A is where you start, and B is on/past the point you wish to make a gate.</dd>
+	</div>
+</body>
+</html>
