@@ -1,5 +1,5 @@
 .row{
-	margin: -5px 0px;
+	/*height: 32px;*/
 }
 #game div {
 	-webkit-user-select: none;  /* Chrome all / Safari all */
@@ -10,37 +10,42 @@
 .row .col {
 	display: inline-block;
 	position: relative;
-	width: 32px;
-	height: 32px;
+	/*width: 32px;
+	height: 32px;*/
 }
-.row .col div {
+div[class*="layer"], div[class*="current"] {
 	position: absolute;
-	width: 32px;
-	height: 32px;
+	/*width: 32px;
+	height: 32px;*/
 }
 .row .col.selected {
 	outline: 1px solid white;
 	z-index: 1;
 }
-#grid img {
+#chip img {
 	position: absolute;
 	vertical-align: top;
-	width: 32px;
-	height: 32px;
+	/*width: 32px;
+	height: 32px;*/
 }
-#grid img:not(.active){
+#chip img:not(.active){
 	visibility:hidden;
 }
-#grid {
+#chip {
 	background-color: #888;
 	display: inline-block;
 }
+div[class*="current"].active{
+	background-color: #fdd;
+	opacity: 0.4;
+	filter: alpha(opacity=40); /* For IE8 and earlier */
+}
 img {                   
-	image-rendering: -moz-crisp-edges;         /* Firefox */
-	image-rendering:   -o-crisp-edges;         /* Opera */
-	image-rendering: -webkit-optimize-contrast;/* Webkit (non-standard naming) */
+	image-rendering: -moz-crisp-edges;			/* Firefox */
+	image-rendering: -o-crisp-edges;			/* Opera */
+	image-rendering: -webkit-optimize-contrast;	/* Webkit (non-standard naming) */
 	image-rendering: crisp-edges;
-	-ms-interpolation-mode: nearest-neighbor;  /* IE (non-standard property) */
+	-ms-interpolation-mode: nearest-neighbor;  	/* IE (non-standard property) */
 }
 fieldset {
 	display: inline-table;

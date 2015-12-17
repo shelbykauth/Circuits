@@ -6,19 +6,23 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 	<script src="main.js"></script>
 	<link rel="stylesheet" type="text/css" href="main.css">
+	<style id="chipSize"></style>
 </head>
 <body>
 	<div id="game">
-		<div id="grid"></div>
+		<div id="chip"></div>
 		<div id="selection"><form>
 			<fieldset id="type">
 				<input type="radio" name="type" value="N">N-Type<br>
 				<input type="radio" name="type" value="P">P-Type<br>
 				<input type="radio" name="type" value="M">Metal<br>
 				<input type="radio" name="type" value="V">Via<br>
+				<input type="radio" name="type" value="EM">Current: Metal<br>
+				<input type="radio" name="type" value="ES">Current: Silicon<br>
 				<input type="checkbox" name="type" id="delete">Delete<br>
 				<input type="checkbox" name="type" id="clickToHold">Click once to stay selected
 			</fieldset>
+			<button id="resetCurrent">Go to next round of Electricity!</button>
 			<!--
 			<fieldset id="location">
 				Point A: X and Y

@@ -1,27 +1,42 @@
 /***************************************
 / All 4-way directional arrays go Up, Right, Down, Left //URDL
-/
-/ 
+/ GridSquare variables stored consist of S,G,M,V
+/ These stand for Silicon, Gates, Metal, Vias, and Electricity
+/ 			S: [baseType, URDL], each being <""|"n"|"p">
+			G: [<""|"npn"|"pnp">, <""|"h"|"v">]
+			M: [middle, URDL], <0|1>
+			V: [is it there], <0|1>
+	Electric Current is its own array to keep memory + looping costs low.
+			current[x][y]= {"M":<0|1>,           	// Metal on or off // resets each turn
+							"S":<0|1>,				// Silicon on or off // resets each turn
+							"G":<"d"|"gd"|"gu"|"u">}// Gate down, up, going down, or going up // reset turn after a voltage change
 ***************************************/
 window.Game = {
-	"gridSquare":"",
 	"lastSquare":[],
-	"grid":{
+	"chip":{
+		"gridSquare":"",
+		"size": 32,
+		"activeGates":[],
+		"width":0,
+		"height":0,
 		"map":[],
 		"selected":[],
 		/*  Functions:
 				connect(): 		Triggered when you hold the mouse while moving through two zones.
 									- Also triggered multiple times by line-drawing mode
 				disconnect():	Triggered when you click the mouse in delete mode
-				set():     		Triggered (mostly?) by Connect()
-				unset():   		Triggered (mostly?) by Disconnect()
+				set():     		!!! Depreciated !!!
+				unset():   		!!! Depreciated !!!
 				draw():    		Triggered (only?) by set() and unset(), pulls from current map[];
-				undraw():  		Triggered by set() and unset()
+				undraw():  		!!! Depreciated !!!
 				checkLoc():		Checks that the parameter is a 2-element array within the grid
+				getAdj():		Gets all adjacent squares.
 				select():		Highlights/Identifies grid spaces
-				deselect():
+				deselect():		Unhighlights everything.
 				addPic():		Triggered by draw()
 				rmvPic():		Triggered by draw() and undraw()
+				mouseConnect(): Triggered by mouse events created by makeGrid()
+				sendCurrent():  Triggered on circuit test.  Recursive.
 				
 				//addPic() and rmvPic() are simple, repetetive, and complex to type.  They merely show/hide the pictures.  checkLoc() follows the same principle, but is merely a guard statement regarding improper location variables.
 				//draw() and undraw() are most likely to change when I redo the graphics.  Actually, it should be the only one that changes at all.
@@ -37,23 +52,23 @@ window.Game = {
 			//B can equal A, or can be one square away in one direction
 			//Decisions for Silicon should be placed here, not left for set()
 			if (!b){
-				console.log("Error: Game.grid.connect(): Needs 3 parameters");
+				console.log("Error: Game.chip.connect(): Needs 3 parameters");
 				return false;
 			}
-			if (!this.checkLoc(a,".connect()")){
+			if (!this.checkLoc(a,".connect(a)")){
 				return false;
 			}
-			if (!this.checkLoc(b,".connect(This is for b)")){
-				return false;
+			if (!this.checkLoc(b,".connect(b)")){
+				// return false; // temporarily disabled
 			}
 			/* A has to be greater than B on ocasion
 			if (a[0]>b[0]||a[1]>b[1]){
-				console.log("Error: Game.grid.connect(): a>b");
+				console.log("Error: Game.chip.connect(): a>b");
 				return false;
 			}*/
 			if ((Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]))>1){
 				console.log(a,b);
-				console.log("Error: Game.grid.connect(): a and b farther than adjacent");
+				console.log("Error: Game.chip.connect(): a and b farther than adjacent");
 				return false;
 			}
 			//console.log(a,b);
@@ -104,13 +119,16 @@ window.Game = {
 						//Must be going in same direction
 						//If it can, do not create a new gate.  Do not touch the gate.  Just link to/from it.
 					}
+					if(dataB["G"][0]){
+						break;
+					}
 					if(dataB["S"][0] == s2){
 						//console.log("Verified: connect(): dataB[\"S\"][0] == s2");
 						if (dataB["S"].toString() == [s2,"",s2,"",s2].toString() && a[0]==b[0]){
 							var adj1 = this.map[b[0]+1][b[1]]["G"];
 							var adj2 = this.map[b[0]-1][b[1]]["G"];
 							if (adj1[1]=="v" || adj2[1]=="v"){
-								break;
+								// break; // Removing This Rule
 							}
 							dataB["G"] = [s2+s1+s2,"h"];
 							if(a[1]>b[1]){
@@ -128,8 +146,7 @@ window.Game = {
 							var adj1 = this.map[b[0]][b[1]+1]["G"];
 							var adj2 = this.map[b[0]][b[1]-1]["G"];
 							if (adj1[1]=="h" || adj2[1]=="h"){
-								console.log(adj1,adj2);
-								break;
+								// break; // Removing This Rule
 							}
 							dataB["G"] = [s2+s1+s2,"v"];
 							if(a[0]>b[0]){
@@ -147,7 +164,7 @@ window.Game = {
 						//If other color is there already but no gate exists, See if Gate can be made.
 						//We already know that there is only one color in square, because there is no gate
 						//["S"] == [s2,0,s2,0,s2] or [s2,s2,0,s2,0]
-						//The s2 silicon in that square cannot lead directly to another gate that it's the top of.
+						// Removing This Rule //The s2 silicon in that square cannot lead directly to another gate that it's the top of.
 					}
 					//remainder is if there is no other color in dataB
 					//treat like metal, except with s1 instead of 1 and "S" instead of type
@@ -191,12 +208,16 @@ window.Game = {
 					dataB[type][0] = 1;
 				break;
 				case "V":
-					console.log("Confirmed connect(\"V\"...");
 					dataA[type][0] = dataA["G"][0]?0:1;
 					dataB[type][0] = dataB["G"][0]?0:1;
 				break;
+				case "EM":
+				case "ES":
+					//temporary type
+					this.sendCurrent(a,"god",type[1]);
+				break;
 				default:
-					console.log("Error: Game.grid.connect(): invalid type");
+					console.log("Error: Game.chip.connect(): invalid type");
 			}
 			//No set() or other changers below this switch statement.
 			//draw() only displays stuff, not changes it.
@@ -220,18 +241,7 @@ window.Game = {
 				this.disconnect(type,b);
 			}
 			var base = this.map[x][y];
-			var adj = ["placeHolder",
-					   [x,y-1,y==1],
-					   [x+1,y,x==this.width],
-					   [x,y+1,y==this.height],
-					   [x-1,y,x==1]];
-			// the i's of adj line up with the URLD directions from base.  So base["M"][i] leads to adj[i]
-			// adj[i][3][*][(i+1)%4+1] goes from adj[i] to base.
-			// adj[i][2] is boolean for if the square is over the edge of the grid, used to skip iterations
-			for (var i=1;i<5;i++){
-				if(adj[i][2]){ continue; }
-				adj[i][3] = this.map[adj[i][0]][adj[i][1]];
-			}
+			var adj = this.getAdj(a);
 			switch(type){
 				case "G":
 					//This should only be called from case "S" before the bottom of the gate is cut.
@@ -308,76 +318,11 @@ window.Game = {
 			this.draw(a,"S");
 			this.draw(a,"G");
 		},
-		"set":function(a,key,index,np){
-			console.log("What the heck is using Game.grid.set()?  This is depreciated");
-			if (!this.checkLoc(a,".set()")){
-				return false;
-			}
-			var base = this.map[a[0]][a[1]][key];
-			switch(key){
-				case "M":
-					if (index){
-						this.set(a,"M",0);
-					}
-				case "V":
-					base[index] = 1;
-				break;
-				case "S":
-					if(index){
-						if (["npnh","npnv","pnph","pnpv"].indexOf(np) == -1){
-							console.log("Error: Game.grid.set(): invalid np")
-						}
-						base[index][1] = np[1];
-						base[index][2] = np[3];
-					} else {
-						base[index][0] = np;
-					}
-				break;
-				case "G":
-					
-				break;
-				default:
-					console.log("Error: Game.grid.set(): invalid key")
-			}
+		"set":function(){ // Depreciated
+			console.log("What the heck is using Game.chip.set()?  This is depreciated");
 		},
-		"unset":function(a,key,index){
-			console.warn("Game.grid.unset() is scheduled for deletion.  Please remove any references to this function.")
-			if (!this.checkLoc(a,".unset()")){
-				return false;
-			}
-			var base = this.map[a[0]][a[1]][key];
-			switch (key){
-				case "V":
-					base = [0]
-				break;
-				case "S":
-					if (index){
-						this.map[a[0]][a[1]]["N"][index-1] = 0;
-						this.map[a[0]][a[1]]["P"][index-1] = 0;
-					} else {
-						base = ["","",""];
-					}
-				break;
-				case "G":
-					
-				break;
-				case "M":
-					
-				break;
-				default:
-			}
-			
-			if (!index && key!="V"){
-				this.unset(a,key,1);
-				this.unset(a,key,2);
-				this.unset(a,key,3);
-				this.unset(a,key,4);
-				if (key=="S"){
-					this.map[a[0]][a[1]]["G"] = ["",0,0,0,0];
-					this.undraw(a,"G");
-				}
-			}
-			base[key][index] = 0;
+		"unset":function(){ // Depreciated
+			console.log("What the heck is using Game.chip.unset()?  This is depreciated");
 		},
 		"draw":function(a,key){
 			if (!this.checkLoc(a,".draw()")){
@@ -422,44 +367,46 @@ window.Game = {
 				case "V":
 					this[data["V"][0]?"addPic":"rmvPic"](a[0],a[1],"img.via");
 				break;
+				case "EM":
+				case "ES":
+				case "E":
+					this[(Game.chip.current[a[0]][a[1]].S || Game.chip.current[a[0]][a[1]].M)?"addPic":"rmvPic"](a[0],a[1],".current_metal");
+				break;
 				default:
-					console.log("Error: Game.grid.draw(): key is not valid:",key);
+					console.log("Error: Game.chip.draw(): key is not valid:",key);
 			}
 		},
-		"undraw":function(a,key){
-			console.warn("Game.grid.undraw() is scheduled for deletion.  Please remove any references to it as soon as possible.");
-			if (!this.checkLoc(a,".undraw()")){
-				return false;
-			}
-			var base = this.map[a[0]][a[1]][key];
-			var square = $(".row:nth-child("+a[1]+") .col:nth-child("+a[0]+")");
-			switch(key){
-				case "M":
-					square.find(".layer_metal img").removeClass('active');
-				break;
-				case "S":
-					square.find(".layer_silicon img").removeClass('active');
-				break;
-				case "V":
-					square.find(".layer_via img").removeClass('active');
-				break;
-				case "G":
-					square.find(".layer_gate img").removeClass('active');
-				break;
-				default:
-					console.log("Error: Game.grid.undraw(): key is not valid");
-			}
+		"undraw":function(a,key){ // Depreciated
+			console.log("What the heck is using Game.chip.undraw()?  This is depreciated");
 		},
 		"checkLoc":function(a,msg){
-			if (!a||!a[0]||!a[1]||a[0]<1||a[1]<1||(a[0]>=Game.grid.map.length)||(a[1]>=Game.grid.map[1].length)){
+			if (!a||!a[0]||!a[1]||a[0]<1||a[1]<1||(a[0]>=Game.chip.map.length)||(a[1]>=Game.chip.map[1].length)){
 				if(msg!="silent"){
-					msg = "Error: Game.grid" + (msg || ".checkLoc():") + " location error:" + a + a[0] + a[1];
+					msg = "Error: Game.chip" + (msg || ".checkLoc():") + " location error:" + a + a[0] + a[1];
 					console.log(msg);
 				}
 				return false;
 			} else {
 				return true;
 			}
+		},
+		"getAdj":function(a){
+			var x = a[0];
+			var y = a[1];
+			var adjacent =  ["placeHolder",
+							[x,y-1,y==1],
+							[x+1,y,x==this.width],
+							[x,y+1,y==this.height],
+							[x-1,y,x==1]];
+			for (var i=1;i<5;i++){
+				if(adjacent[i][2]){ continue; }
+				adjacent[i][3] = this.map[adjacent[i][0]][adjacent[i][1]];
+			}
+			return adjacent;
+			// i is the direction from a to the adjacent square.
+			// (i+1)%4+1 is the direction from the adjacent square to a.
+			// baseA[type][i] connects with baseAdj[type][(i+1)%4+1]
+			// adj[i] = [x,y,invalid,map]
 		},
 		"select": function(a){
 			if (!this.checkLoc(a,".select()")){
@@ -474,13 +421,13 @@ window.Game = {
 		},
 		"addPic":function(x,y,pic){
 			if (pic.indexOf("img")==-1){
-				console.warn("Please include 'img' in the selector parameter for Game.grid.addPic()  To expand functionality, 'img.' is being removed from addPic() and rmvPic()");
+				//console.warn("Please include 'img' in the selector parameter for Game.chip.addPic()  To expand functionality, 'img.' is being removed from addPic() and rmvPic()");
 			}
 			$(".row:nth-child("+y+") .col:nth-child("+x+") "+pic).addClass("active");
 		},
 		"rmvPic":function(x,y,pic){
 			if (pic.indexOf("img")==-1){
-				console.warn("Please include 'img' in the selector parameter for Game.grid.rmvPic()  To expand functionality, 'img.' is being removed from addPic() and rmvPic()");
+				//console.warn("Please include 'img' in the selector parameter for Game.chip.rmvPic()  To expand functionality, 'img.' is being removed from addPic() and rmvPic()");
 			}
 			$(".row:nth-child("+y+") .col:nth-child("+x+") "+pic).removeClass("active");
 		},
@@ -503,27 +450,27 @@ window.Game = {
 				if (ay==by&&ax!=bx){
 					if (ax<bx){
 						for (var x=ax;x<bx;x++){
-							Game.grid[cORd](type,[x,ay],[x+1,ay]);
+							Game.chip[cORd](type,[x,ay],[x+1,ay]);
 						};
 					} else {
 						for (var x=ax;x>bx;x--){
-							Game.grid[cORd](type,[x,ay],[x-1,ay]);
+							Game.chip[cORd](type,[x,ay],[x-1,ay]);
 						};
 					}
 				}
 				if (ax==bx&&ay!=by){
 					if (ay<by){
 						for (var y=ay;y<by;y++){
-							Game.grid[cORd](type,[ax,y],[ax,y+1]);
+							Game.chip[cORd](type,[ax,y],[ax,y+1]);
 						};
 					} else {
 						for (var y=ay;y>by;y--){
-							Game.grid[cORd](type,[ax,y],[ax,y-1]);
+							Game.chip[cORd](type,[ax,y],[ax,y-1]);
 						}
 					}
 				}
 				if (ax==bx&&ay==by){
-					Game.grid[cORd](type,square,square);
+					Game.chip[cORd](type,square,square);
 				}
 				if (ax!=bx&&ay!=by){
 					this[cORd](type,square,square);
@@ -535,6 +482,211 @@ window.Game = {
 			Game.lastSquare = square;
 			this.deselect();
 			this.select(square);
+		},
+		"sendCurrent":function(a,b,type){
+			var type2 = (type=="M")?"S":"M";
+			if (type!="S" && type!="M"){
+				console.log("Error: Game.chip.sendCurrent(): invalid type",type);
+				return;
+			}
+			if(!this.checkLoc(a,'.sendCurrent(a)')){
+				return false;
+			}
+			var x = a[0];
+			var y = a[1];
+			if (!this.map[x][y][type][0]){
+				return false;
+			}
+			var baseA = this.map[x][y];
+			var curSquare = this.current[x][y];
+			if (!baseA[type][0]){
+				console.log("Error: Game.chip.sendCurrent(): improper current sent.");
+				return;
+			}
+			var adj = this.getAdj(a);
+			if (typeof b == "string"||!this.checkLoc(b,'Game.chip.sendCurrent(b)')){
+				if (baseA["G"][0] && type=="S"){
+					return false;
+				}// if this square has a gate(and the current flows through silicon), you must know an on-the-board source.
+			} else {
+				var x2 = b[0];
+				var y2 = b[1];
+				if (Math.abs(x2-x)+Math.abs(y2-y)>1){
+					console.log("Error: Game.chip.sendCurrent(): a and b aren't adjacent.");
+					return false;
+				}
+				if (x2==x&&y2==y){
+					console.log("Error: Game.chip.sendCurrent(): a and b are the same.");
+					return false;
+				}
+				// End b guards: if there's a b, b should make sense. //
+				if (baseA["G"][0] && type=="S"){
+					var possible = [false,
+									b[1]>a[1],
+									b[0]<a[0],
+									b[1]<a[1],
+									b[0]>a[0] ]
+					var dir = possible.indexOf(true);
+					if (baseA["S"][dir]==baseA["S"][0]){
+						//Silicon is to bottom of gate.
+						//If NPN: goes thru if Gate is up or going down (AND)
+						//If PNP: goes thru if Gate is down or going up (NOT)
+						var status = curSquare["G"];
+						if (baseA["G"][0] == "npn"){
+							if (status == "u" || status == "gd"){
+								this.sendCurrent(adj[dir],a,"S");
+							};
+						} else {
+							if (status == "d" || status == "gu"){
+								this.sendCurrent(adj[dir],a,"S");
+							};
+						}
+					} else {
+						if (curSquare["G"] == "d" || curSquare["G"] == "gu"){
+							curSquare["G"] = "gu";
+						} else {
+							curSquare["G"] = "u";
+						} // if (it was completely down or if it just got switched up) and else
+						  // It can't be going up already without a second side of the gate being activated.
+						this.activeGates.push([x,y]);
+					} // if this silicon is bottom of gate, and else
+					return;
+				} // If we're powering the gate
+			}
+			// If there is no gate //
+			if (this.current[x][y][type]){
+				return true;
+			} // Recursion Guard.  Stop the flood at the already-flooded.
+			this.current[x][y][type] = 1;
+			this.draw(a,"E");
+			for (var i=1;i<5;i++){
+				if (baseA[type][i]){
+					this.sendCurrent(adj[i],a,type);
+				}
+				if (baseA["V"][0]){
+					if (baseA[type2][i]){
+						this.sendCurrent(adj[i],a,type2);
+					}
+				}
+			}
+		},
+		"resetCurrent":function(){
+			var cur = Game.chip.current = 
+				Array.apply(null, Array(Game.chip.width + 1))
+				.map(function(){
+					return Array.apply(null, Array(Game.chip.height + 1))
+					.map(function(){
+						return {"M":0,
+								"S":0,
+								"G":"d"
+								}
+					});
+				});
+			for (var i=0; i<this.activeGates.length; i++){
+				var x = this.activeGates[i][0];
+				var y = this.activeGates[i][1];
+				cur[x][y]["G"] = "gd";
+			}
+			this.activeGates = [];
+			$(".row .col .current_metal").removeClass("active");
+			$(".row .col .current_silicon").removeClass("active");
+		},
+		"makeGrid":function(x,y){
+			console.log("Starting to make Grid.  Behind the scenes");
+			Game.chip.width=x;
+			Game.chip.height=y;
+			x++;
+			y++;
+			//Functional Only//
+			var m = this.map = 
+				Array.apply(null, Array(x))
+				.map(function(){
+					return Array.apply(null, Array(y))
+					.map(function(){
+						return {"M":[0,0,0,0,0],
+								"S":["","","","",""],
+								"G":["",""],
+								"V":[0]
+								}
+					});
+				});
+			var c = this.current = 
+				Array.apply(null, Array(x))
+				.map(function(){
+					return Array.apply(null, Array(y))
+					.map(function(){
+						return {"M":0,
+								"S":0,
+								"G":"d"
+								}
+					});
+				});
+			console.log("Moving onto HTML portion");
+			//Appearance Only//
+			var row = '<div class="row" unselectable="on">'
+			for (var i=1; i<x; i++){
+				row += this.gridSquare;
+			}
+			row += '</div>';
+			$("#chip").empty();
+			console.log("TimeoutSet!!!");
+			var rowsAppended = 1;
+			function appendRow(){
+				$("#chip").append(row);
+				rowsAppended++;
+				if (rowsAppended < y){
+					setTimeout(appendRow, 10);
+				} else {
+					console.log(".row .col has ",$(".row .col").length,"entries");
+					$(".row .col").mouseenter(function(e){
+						if(e.buttons>0){
+							this.mouseConnect(this);
+						}
+					}).mousedown(function(){
+						this.mouseConnect(this);
+					});
+					$("#chip").mouseleave(function(){
+						Game.lastSquare = [];
+					});
+					$("input#ax,input#bx").attr("max",x-1);
+					$("input#ay,input#by").attr("max",y-1);
+					console.log("Finished with HTML portions");
+				}
+			}
+			if (document.styleSheets[1].cssRules[0]){
+				document.styleSheets[1].cssRules[0].style.height = (this.size * (y-1)) + "px";
+			}
+			appendRow();
+			chip += '</div>';
+			//console.log("Finished with string.  Inserting as HTML");
+			//$("#chip").replaceWith(grid);
+			//Selections Only//
+			$(".row .col").mouseenter(function(e){
+				if(e.buttons>0){
+					this.mouseConnect(this);
+				}
+			}).mousedown(function(){
+				this.mouseConnect(this);
+			});
+			$("#chip").mouseleave(function(){
+				Game.lastSquare = [];
+			});
+			$("input#ax,input#bx").attr("max",x-1);
+			$("input#ay,input#by").attr("max",y-1);
+		},
+		"resize":function(size){
+			//size should be in pixels, defining the size of each grid square.
+			Game.chip.size = size;
+			var style = "<style id='gridSize'>" +
+						"#chip{" +
+						"height: "+size*Game.chip.height+"px;}\n" +
+						".row{" +
+							"height: "+size+"px;}\n" +
+						".col, div[class*='layer'], div[class*='current'], #chip img {" +
+							"height: "+size+"px;\n" +
+							"width : "+size+"px;}\n" +
+						"</style>";
+			$("style#chipSize").replaceWith(style);
 		}
 	},
 	"selectors":{
@@ -566,7 +718,7 @@ window.Game = {
 		}
 		Metal += '<img class="m'+number+'" src="SmallGridSpaces/Metal/1'+number+'.png">';
 	}
-	Game.gridSquare =
+	Game.chip.gridSquare =
 		'<div class="col" unselectable="on">' +
 			'<div class="layer_bg">' +
 				'<img class="bg active" src="SmallGridSpaces/Extra/background.png">' +
@@ -578,63 +730,16 @@ window.Game = {
 				'<img class="npnv" src="SmallGridSpaces/Extra/NPN_V.png">'+
 				'<img class="pnpv" src="SmallGridSpaces/Extra/PNP_V.png">'+
 			'</div>' +
+			'<div class="current_silicon"></div>'+
 			'<div class="layer_via">' +
 				'<img class="via" src="SmallGridSpaces/Extra/via.png">'+
 			'</div>' +
 			Metal + '</div>' +
-			'<div class="layer_transparency"></div>'+
+			'<div class="current_metal"></div>'+
 		'</div>';
 })();
-function makeGrid(x,y){
-	console.log("Starting to make Grid.  Behind the scenes");
-	Game.grid.width=x;
-	Game.grid.height=y;
-	x++;
-	y++;
-	//Functional Only//
-	var m = Game.grid.map = [];
-	for (var i=1;i<x;i++){
-		m[i] = [];
-		for (var j=1;j<y;j++){
-			m[i][j] = {
-				"M":[0,0,0,0,0],   		//Metal:	MURDL // <0|1>
-				"S":["","","","",""],	//Silicon:	MURDL // <""|"n"|"p">
-				"G":["",""],			//Gate:		type, orientation // <""|"npn"|"pnp">,<""|"h","v">
-				"V":[0]           		//Via:		present // <0|1>
-			}
-		}
-	}
-	console.log("Moving onto HTML portion");
-	//Appearance Only//
-	var row = '<div class="row" unselectable="on">'
-	var grid = '<div id="grid">'
-	for (var i=1; i<x; i++){
-		row += Game.gridSquare;
-	}
-	row += '</div>';
-	for (var i=1; i<y; i++){
-		grid += row;
-	}
-	grid += '</div>';
-	console.log("Finished with string.  Inserting as HTML");
-	$("#grid").replaceWith(grid);
-	console.log("Finished with HTML portions");
-	//Selections Only//
-	$(".row .col").mouseenter(function(e){
-		if(e.buttons>0){
-			Game.grid.mouseConnect(this);
-		}
-	}).mousedown(function(){
-		Game.grid.mouseConnect(this);
-	});
-	$("#grid").mouseleave(function(){
-		Game.lastSquare = [];
-	});
-	$("input#ax,input#bx").attr("max",x-1);
-	$("input#ay,input#by").attr("max",y-1);
-}
 function testAppearance(loc){
-	var g = Game.grid
+	var g = Game.chip
 	var loc = loc||"img.";
 	g.addPic(1,1,loc+"pm");
 	g.addPic(1,1,loc+"pr");
@@ -665,7 +770,7 @@ function testAppearance(loc){
 	g.addPic(3,3,loc+"via");
 }
 $(document).ready(function(){
-	makeGrid(14,10);
+	Game.chip.makeGrid(14,10);
 	//testAppearance();
 	$("#connect").click(function(e){
 		e.preventDefault();
@@ -679,26 +784,26 @@ $(document).ready(function(){
 			return false;
 		}
 		var cORd = ($("fieldset#type input[value=X]:checked").length)?"disconnect":"connect"; // connect or disconnect
-		Game.grid[cORd](type,[ax,ay],[ax,ay]);
-		Game.grid[cORd](type,[bx,by],[bx,by]);
+		Game.chip[cORd](type,[ax,ay],[ax,ay]);
+		Game.chip[cORd](type,[bx,by],[bx,by]);
 		if (ay==by){
 			if (ax<bx){
 				for (var x=ax;x<bx;x++){
-					Game.grid[cORd](type,[x,ay],[x+1,ay]);
+					Game.chip[cORd](type,[x,ay],[x+1,ay]);
 				};
 			} else {
 				for (var x=ax;x>bx;x--){
-					Game.grid[cORd](type,[x,ay],[x-1,ay]);
+					Game.chip[cORd](type,[x,ay],[x-1,ay]);
 				};
 			}
 		} else {
 			if (ay<by){
 				for (var y=ay;y<by;y++){
-					Game.grid[cORd](type,[ax,y],[ax,y+1]);
+					Game.chip[cORd](type,[ax,y],[ax,y+1]);
 				};
 			} else {
 				for (var y=ay;y>by;y--){
-					Game.grid[cORd](type,[ax,y],[ax,y-1]);
+					Game.chip[cORd](type,[ax,y],[ax,y-1]);
 				}
 			}
 		}
@@ -709,27 +814,27 @@ $(document).ready(function(){
 		var bx = parseInt($("fieldset#location #bx").val());
 		var ay = parseInt($("fieldset#location #ay").val());
 		var by = parseInt($("fieldset#location #by").val());
-		Game.grid.deselect();
-		Game.grid.select([ax,ay]);
+		Game.chip.deselect();
+		Game.chip.select([ax,ay]);
 		if (ay==by){
 			if (ax<bx){
 				for (var x=ax;x<bx;x++){
-					Game.grid.select([x+1,by]);
+					Game.chip.select([x+1,by]);
 				};
 			} else {
 				for (var x=bx;x<ax;x++){
-					Game.grid.select([x,by]);
+					Game.chip.select([x,by]);
 				};
 			}
 		}
 		if (ax==bx){
 			if (ay<by){
 				for (var y=ay;y<by;y++){
-					Game.grid.select([bx,y+1]);
+					Game.chip.select([bx,y+1]);
 				};
 			} else {
 				for (var y=by;y<ay;y++){
-					Game.grid.select([bx,y]);
+					Game.chip.select([bx,y]);
 				}
 			}
 		}
@@ -752,11 +857,18 @@ $(document).ready(function(){
 	Game.selectors.type = $("fieldset#type input:radio:checked").val();
 	Game.selectors.clickToHold = $("fieldset#type input#clickToHold")[0].checked;
 	Game.selectors.delete = $("fieldset#type input#delete")[0].checked;
+	$("#resetCurrent").click(function(e){
+		e.preventDefault();
+		Game.chip.resetCurrent();
+	});
 	document.onmouseup = function(){
 		if(!Game.selectors.clickToHold){
 			Game.lastSquare = [];
 			$(".row .col.selected").removeClass("selected");
 		}
 	}
+	Game.chip.resize(32);
 	
 });
+
+
