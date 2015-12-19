@@ -1,22 +1,19 @@
-.row{
-	/*height: 32px;*/
-}
 #game div {
 	-webkit-user-select: none;  /* Chrome all / Safari all */
 	-moz-user-select: none;     /* Firefox all */
 	-ms-user-select: none;      /* IE 10+ */
 	user-select: none;          /* Likely future */
 }
+#game > div {
+	display:inline-block;
+	vertical-align:top;
+}
 .row .col {
 	display: inline-block;
 	position: relative;
-	/*width: 32px;
-	height: 32px;*/
 }
 div[class*="layer"], div[class*="current"] {
 	position: absolute;
-	/*width: 32px;
-	height: 32px;*/
 }
 .row .col.selected {
 	outline: 1px solid white;
@@ -24,9 +21,6 @@ div[class*="layer"], div[class*="current"] {
 }
 #chip img {
 	position: absolute;
-	vertical-align: top;
-	/*width: 32px;
-	height: 32px;*/
 }
 #chip img:not(.active){
 	visibility:hidden;

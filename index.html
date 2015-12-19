@@ -13,35 +13,24 @@
 		<div id="chip"></div>
 		<div id="selection"><form>
 			<fieldset id="type">
-				<input type="radio" name="type" value="N">N-Type<br>
-				<input type="radio" name="type" value="P">P-Type<br>
-				<input type="radio" name="type" value="M">Metal<br>
-				<input type="radio" name="type" value="V">Via<br>
-				<input type="radio" name="type" value="EM">Current: Metal<br>
-				<input type="radio" name="type" value="ES">Current: Silicon<br>
-				<input type="checkbox" name="type" id="delete">Delete<br>
-				<input type="checkbox" name="type" id="clickToHold">Click once to stay selected
+				<input type="radio" name="type" value="N" id="typeN">
+				<label for="typeN">N-Type</label>
+				<input type="radio" name="type" value="P" id="typeP">
+				<label for="typeP">P-Type</label><br>
+				<input type="radio" name="type" value="M" id="typeM">
+				<label for="typeM">Metal</label>
+				<input type="radio" name="type" value="V" id="typeV">
+				<label for="typeV">Via</label><br>
+				<input type="radio" name="type" value="pin" id="pin">
+				<label for="pin">I/O Pin</label>
+				<input type="checkbox" name="type" id="delete">
+				<label for="delete">Delete</label><br>
+				<input type="checkbox" name="type" id="clickToHold">
+				<label for="clickToHold">Click once to stay selected</label><br>
+				<button id="resetCurrent">Go to next round of Electricity!</button>
 			</fieldset>
-			<button id="resetCurrent">Go to next round of Electricity!</button>
-			<!--
-			<fieldset id="location">
-				Point A: X and Y
-				<input type="number" id="ax" min="1">
-				<input type="number" id="ay" min="1"><br>
-				Point B: X and Y
-				<input type="number" id="bx" min="1">
-				<input type="number" id="by" min="1"><br>
-				<button id="connect">Connect the Squares</button><br>
-				Note: Please keep (X xor Y) the same value.
-			</fieldset>
-			<!-- -->
 			<br>
 		</form></div>
-		<dl id="updates">
-			<dt>Pro Tips</dt>
-				<dd>Hold mousebutton and move it to draw.  Move your mouse slowly.<dd>
-				<dd>When using the line-connector, make sure X and/or Y are on the same level.</dd>
-				<dd>When using the line-connector, make sure that A is where you start, and B is on/past the point you wish to make a gate.</dd>
 	</div>
 </body>
 </html>

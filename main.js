@@ -640,10 +640,10 @@ window.Game = {
 					console.log(".row .col has ",$(".row .col").length,"entries");
 					$(".row .col").mouseenter(function(e){
 						if(e.buttons>0){
-							this.mouseConnect(this);
+							Game.chip.mouseConnect(this);
 						}
 					}).mousedown(function(){
-						this.mouseConnect(this);
+						Game.chip.mouseConnect(this);
 					});
 					$("#chip").mouseleave(function(){
 						Game.lastSquare = [];
@@ -663,10 +663,10 @@ window.Game = {
 			//Selections Only//
 			$(".row .col").mouseenter(function(e){
 				if(e.buttons>0){
-					this.mouseConnect(this);
+					Game.chip.mouseConnect(this);
 				}
 			}).mousedown(function(){
-				this.mouseConnect(this);
+				Game.chip.mouseConnect(this);
 			});
 			$("#chip").mouseleave(function(){
 				Game.lastSquare = [];
